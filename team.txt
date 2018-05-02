@@ -1,2 +1,7 @@
+FIRE
+Swampert,Manaphy_w,Volcanion,Regirock
+# screen2.jpeg
+
 NORMAL
 Mewtwo_xs,Lucario,Conkeldurr,Gallade
+# screen.jpeg

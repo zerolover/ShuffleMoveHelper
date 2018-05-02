@@ -13,8 +13,10 @@ float half_sz_; // half length of bounding box
 Mat imgOrg;     // color screenshot
 
 string stage_;                      // stage
+int megaProcess_;                   // mega process
 unordered_map<string, string> pkm_; // pokemon name and icon file
 vector<pair<string, string>> team_; // pokemons into the board
+unordered_map<string, int> megaTh_; // mega threshold
 
 void SplitString(const string& s, vector<string>& v, const string& c)
 {
@@ -49,7 +51,7 @@ bool LoadTeam()
         std::ifstream ifs("../img/icons.txt", std::ifstream::in);
         if(!ifs.is_open())
             return false;
-        while (!ifs.eof() )
+        while(!ifs.eof())
         {
             string strSkip, pkmName, pkmIcon;
             ifs >> strSkip >> pkmName >> pkmIcon;
@@ -64,16 +66,64 @@ bool LoadTeam()
     cout << "Load Stage and Team..." << endl;
     fileTeam >> stage_;
     cout << " * Stage: " << stage_ << endl;
+
     string strTeams;
     fileTeam >> strTeams;
     vector<string> vTeams;
     SplitString(strTeams, vTeams, ",");
+
+    bool bMega = false;
+    if(megaTh_.find(vTeams[0]) != megaTh_.end())
+    {
+        int th = megaTh_[vTeams[0]];
+        if(megaProcess_ >= th)
+        {
+            megaProcess_ = th;
+            bMega = true;
+        }
+        cout << " * Mega Process " << megaProcess_ << "/" << th << endl;
+    }
+    else
+        megaProcess_ = 0;
+
+    int nPkm = 0;
     for(auto str : vTeams)
     {
-        team_.emplace_back(str, pkm_[str]);
-        cout << " - " << str << " " << pkm_[str] << endl;
+        nPkm++;
+        if(nPkm == 1 && bMega)
+        {
+            team_.emplace_back(str, pkm_["Mega_" + str]);
+            cout << " - " << str << " " << pkm_["Mega_" + str] << " *" << endl;
+        }
+        else
+        {
+            team_.emplace_back(str, pkm_[str]);
+            cout << " - " << str << " " << pkm_[str] << endl;
+        }
     }
     team_.emplace_back("Wood", "img/wood.png");
+    return true;
+}
+
+bool LoadMegaThresh()
+{
+    std::ifstream ifs("../img/effects.txt", std::ifstream::in);
+    if(!ifs.is_open())
+        return false;
+
+    string str;
+    const size_t nskip = sizeof("INTEGER MEGA_THRESHOLD_Mega_") - 1;
+    while(getline(ifs, str))
+    {
+        size_t pos = str.find("MEGA_THRESHOLD");
+        if(pos != string::npos)
+        {
+            str.erase(0, nskip);
+            vector<string> vstrs;
+            SplitString(str, vstrs, " ");
+            megaTh_[vstrs[0]] = atoi(vstrs[1].c_str());
+        }
+    }
     return true;
 }
 
@@ -145,8 +195,17 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    if(argc == 2)
+        megaProcess_ = 0;
+    else
+        megaProcess_ = atoi(argv[2]);
+
     // load config
     if(!LoadConfig())
+        return 0;
+
+    // load Mega threshold
+    if(!LoadMegaThresh())
         return 0;
 
     // load Team
@@ -367,6 +426,10 @@ int main(int argc, char** argv)
         std::ofstream ofs(fileBoard, std::ofstream::out);
 
         ofs << "STAGE " << stage_ << endl;
+        ofs << "MEGA_PROGRESS " << megaProcess_ << endl;
+        ofs << "STATUS NONE" << endl;
+        ofs << "STATUS_DURATION 0" << endl;
+
         for(int r = 0; r < 6; r++)
         {
             ofs << "ROW_" << to_string(r + 1) << " ";
