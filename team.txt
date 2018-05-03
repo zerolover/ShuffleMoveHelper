@@ -1,7 +1,31 @@
+NORMAL
+Mewtwo_xs,Lucario,Conkeldurr,Gallade
+# screen.jpeg
+
+450
+Rayquaza,Lucario,Gallade,Genesect
+# screen1.jpeg
+
 FIRE
 Swampert,Manaphy_w,Volcanion,Regirock
 # screen2.jpeg
 
-NORMAL
-Mewtwo_xs,Lucario,Conkeldurr,Gallade
-# screen.jpeg
+SP_307E
+Mawile,Dialga,Metagross_s,Manaphy_w
+# screen3.jpeg
+
+515
+Garchomp,Regirock,Manaphy_w,Volcanion,Pyroar_f
+# screen4.jpeg
+
+510
+Mewtwo_x,Lucario,Conkeldurr,Snorlax
+# screen5.jpeg
+
+504
+Blaziken,Noivern,Heatran,Delphox,Weepinbell
+# screen6.jpeg
+
+SP_536
+Glalie,Volcanion,Palkia,Whimsicott
+# screen7,8,9

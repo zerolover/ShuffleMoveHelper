@@ -238,7 +238,7 @@ int main(int argc, char** argv)
             continue;
 
         // the metal has a few keypoints
-        if(vKeypoints[i].size() <= 6)
+        if(vKeypoints[i].size() <= 8)
         {
             vClass[i] = 9;
             continue;
