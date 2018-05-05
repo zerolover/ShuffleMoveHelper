@@ -14,9 +14,9 @@ Mat imgOrg;     // color screenshot
 
 string stage_;                      // stage
 int megaProcess_;                   // mega process
-unordered_map<string, string> pkm_; // pokemon name and icon file
-vector<pair<string, string>> team_; // pokemons into the board
-unordered_map<string, int> megaTh_; // mega threshold
+unordered_map<string, string> pkm_; // pokemon name and icon file <pokemon name, icon path>
+vector<pair<string, string>> team_; // pokemons into the board <pokemon name, icon path>
+unordered_map<string, int> megaTh_; // mega threshold <pokemon name, threshold>
 
 void SplitString(const string& s, vector<string>& v, const string& c)
 {
@@ -187,6 +187,26 @@ void ExtractIconFeature(const vector<Point2f>& centers, vector<vector<KeyPoint>>
     // waitKey(0);
 }
 
+// ref: He, Kaiming, Jian Sun, and Xiaoou Tang. "Single image haze removal using dark channel prior."
+Mat GetDarkChannel(const Mat& src)
+{
+    Mat rgbmin = Mat::zeros(src.rows, src.cols, CV_8UC1);
+    Mat dark = Mat::zeros(src.rows, src.cols, CV_8UC1);
+
+    for (int m = 0; m < src.rows; m++)
+    {
+        for (int n = 0; n < src.cols; n++)
+        {
+            const Vec3b& intensity = src.at<Vec3b>(m, n);
+            rgbmin.at<uchar>(m, n) = min(min(intensity.val[0], intensity.val[1]), intensity.val[2]);
+        }
+    }
+
+    const int priorSize = 5;
+    erode(rgbmin, dark, Mat::ones(priorSize, priorSize, CV_8UC1));
+    return dark;
+}
+
 int main(int argc, char** argv)
 {
     if(argc < 2)
@@ -229,7 +249,7 @@ int main(int argc, char** argv)
     GenerateIconCenter(vIconCenters);
     ExtractIconFeature(vIconCenters, vKeypoints, vDescriptors);
 
-    // identity board
+    // 1. identify board, each kind of pokemon is represented by numbers (class id)
     int idPokemon = 1;
     std::vector<int> vClass(36, 0);
     for(int i = 0; i < 36; i++)
@@ -327,15 +347,23 @@ int main(int argc, char** argv)
             cout << endl;
     }
 
+    // 2. assign pokemon name to class id and identify barriers
+    Mat imgDark = GetDarkChannel(imgOrg);
+
+    std::vector<bool> vbBarrier(36, false);
     std::vector<string> vstrClass(10, "Air");
-    vstrClass[9] = "Metal";
+    vstrClass[9] = "Metal"; // class id 9 is assigned to Metal
     for(const auto& team : team_)
     {
         const string pkm = team.first;
         const string icon = "../" + team.second;
 
-        Mat imgIcon = imread(icon, 0);
-        resize(imgIcon, imgIcon, Size(), 0.65, 0.65);
+        Mat imgIconColor = imread(icon);
+        resize(imgIconColor, imgIconColor, Size(), 0.65, 0.65);
+
+        Mat imgIcon;
+        cvtColor(imgIconColor, imgIcon, CV_BGRA2GRAY);
+        Mat imgIconDark = GetDarkChannel(imgIconColor);
 
         // extract keypoints
         vector<Point2f> pts;
@@ -357,9 +385,13 @@ int main(int argc, char** argv)
         // imshow("Feature", imgFeature);
         // waitKey(0);
 
-        unordered_map<int, int> vHist;
+        std::vector<int> vDarkChannelDiff(36, -1);
+        unordered_map<int, int> vHist; // <class id, count>
         for(int i = 0; i < 36; i++)
         {
+            if(vClass[i] == 9)
+                continue;
+
             BFMatcher matcher(NORM_HAMMING);
             std::vector<DMatch> matches;
             matcher.match(descriptors, vDescriptors[i], matches);
@@ -407,21 +439,56 @@ int main(int argc, char** argv)
             if(nInliers >= 10)
                 vHist[vClass[i]]++;
 
+            // if(nInliers >= 10)
+            {
+                int sum = 0;
+                for(size_t k = 0, kend = vbInliers.size(); k < kend; k++)
+                {
+                    if(!vbInliers[k])
+                        continue;
+                    int pixIcon = imgIconDark.at<uchar>(kpts[matches[k].queryIdx].pt);
+                    int pixImg = imgDark.at<uchar>(vKeypoints[i][matches[k].trainIdx].pt);
+                    sum += (pixImg - pixIcon);
+                }
+                vDarkChannelDiff[i] = sum / (float)nInliers;
+            }
+
             // Mat img_matches;
-            // drawMatches(imgIcon, kpts, imgOrg, vKeypoints[i], matches, img_matches,
+            // drawMatches(imgIconColor, kpts, imgOrg, vKeypoints[i], matches, img_matches,
             //             Scalar::all(-1), Scalar::all(-1), vbInliers);
             // imshow("Result", img_matches);
             // waitKey(0);
         }
 
         int nMax = -1;
+        int classId = -1;
         for(const auto& it : vHist)
+        {
             if(it.second > nMax)
-                vstrClass[it.first] = pkm;
+            {
+                classId = it.first;
+                nMax = it.second;
+            }
+        }
+
+        if(classId != -1)
+            vstrClass[classId] = pkm;
+
+        for(int i = 0; i < 36; i++)
+        {
+            if(vClass[i] == classId)
+            {
+                vbBarrier[i] = vDarkChannelDiff[i] > 80;
+            }
+        }
     }
 
-    // save board
+    // 3. save board
     {
+        std::vector<string> vbBarrierStr(36);
+        for(int i = 0; i < 36; i++)
+            vbBarrierStr[i] = vbBarrier[i] ? "true" : "false";
+
         string fileBoard = "../board.txt";
         std::ofstream ofs(fileBoard, std::ofstream::out);
 
@@ -436,7 +503,12 @@ int main(int argc, char** argv)
             for(int c = 0; c < 5; c++)
                 ofs << vstrClass[vClass[r * 6 + c]] << ",";
             ofs << vstrClass[vClass[r * 6 + 5]] << endl;
-            ofs << "FROW_" << to_string(r + 1) << " false,false,false,false,false,false" << endl;
+
+            ofs << "FROW_" << to_string(r + 1) << " ";
+            for(int c = 0; c < 5; c++)
+                ofs << vbBarrierStr[r * 6 + c] << ",";
+            ofs << vbBarrierStr[r * 6 + 5] << endl;
+
             ofs << "CROW_" << to_string(r + 1) << " false,false,false,false,false,false" << endl;
         }
         ofs.close();

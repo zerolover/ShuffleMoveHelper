@@ -1,3 +1,7 @@
+130
+Gyarados,Reshiram,Talonflame,Rhyperior
+# screen0.jpeg
+
 NORMAL
 Mewtwo_xs,Lucario,Conkeldurr,Gallade
 # screen.jpeg
