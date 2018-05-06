@@ -351,6 +351,7 @@ int main(int argc, char** argv)
     Mat imgDark = GetDarkChannel(imgOrg);
 
     std::vector<bool> vbBarrier(36, false);
+    std::vector<int> vCntPerClass(10, 0);
     std::vector<string> vstrClass(10, "Air");
     vstrClass[9] = "Metal"; // class id 9 is assigned to Metal
     for(const auto& team : team_)
@@ -471,8 +472,11 @@ int main(int argc, char** argv)
             }
         }
 
-        if(classId != -1)
+        if(nMax > vCntPerClass[classId])
+        {
             vstrClass[classId] = pkm;
+            vCntPerClass[classId] = nMax;
+        }
 
         for(int i = 0; i < 36; i++)
         {
