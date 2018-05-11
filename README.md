@@ -101,7 +101,7 @@ After building the program, you will see `adjustBoundary` and `ShuffleMoveHelper
 
      ​
 
-   - Copy `board.txt` to `~/Shuffle-Move/config/boards/board.txt`
+   - Copy `board.txt` to `~/Shuffle-Move/config/boards/board.txt`, Skip this step if on Mac or Ubuntu.
 
    - Load the board (File->Load)
 

@@ -493,7 +493,12 @@ int main(int argc, char** argv)
         for(int i = 0; i < 36; i++)
             vbBarrierStr[i] = vbBarrier[i] ? "true" : "false";
 
+#if defined(__linux__) || defined(__APPLE__)
+        string fileBoard = string(getenv("HOME")) + "/Shuffle-Move/config/boards/board.txt";
+#else
         string fileBoard = "../board.txt";
+#endif
+        cout << "Save board.txt to " << fileBoard << endl;
         std::ofstream ofs(fileBoard, std::ofstream::out);
 
         ofs << "STAGE " << stage_ << endl;
