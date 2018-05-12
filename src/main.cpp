@@ -146,9 +146,11 @@ void GenerateIconCenter(vector<Point2f>& centers)
 void ExtractIconFeature(const vector<Point2f>& centers, vector<vector<KeyPoint>>& keypoints, vector<Mat>& descriptors)
 {
     Mat imgFeature = imgOrg.clone();
-    Mat grayImage;
+    Mat grayImage, grayImageCLAHE;
     cvtColor(imgOrg, grayImage, CV_BGR2GRAY);
     Mat mask(grayImage.size(), CV_8UC1);
+    Ptr<CLAHE> clahe = createCLAHE(4.0);
+    clahe->apply(grayImage, grayImageCLAHE);
 
     const float sz = half_sz_;
     for (int i = 0; i < 36; ++i)
@@ -164,6 +166,8 @@ void ExtractIconFeature(const vector<Point2f>& centers, vector<vector<KeyPoint>>
         // extract keypoints
         vector<Point2f> pts;
         goodFeaturesToTrack(grayImage, pts, 50, 0.01, 5, mask);
+        if(pts.size() < 20)
+            goodFeaturesToTrack(grayImageCLAHE, pts, 50, 0.01, 4, mask);
 
         vector<KeyPoint> kpts;
         KeyPoint::convert(pts, kpts);
@@ -292,7 +296,7 @@ int main(int argc, char** argv)
                 Point2f ptQuery = kptsQuery[m.queryIdx].pt - vIconCenters[idxQuery];
                 Point2f ptMatch = kptsMatch[m.trainIdx].pt - vIconCenters[idxMatch];
                 Point2f dpt = ptQuery - ptMatch;
-                bGoodMatch &= (norm(dpt) < 9.0);
+                bGoodMatch &= (norm(dpt) < 8.0);
 
                 vbGoodMatches.push_back(bGoodMatch);
             }
@@ -320,7 +324,8 @@ int main(int argc, char** argv)
                 vbInliers[vIdxInMatches[k]] = status[k];
                 nInliers += status[k];
             }
-            // cout << " = " << nInliers << endl;
+            // cout << "Match: " << kptsQuery.size() << " " << kptsMatch.size()
+            //      << ", Inliers: " << nInliers << endl;
 
             if(nInliers >= 10)
                 vClass[j] = vClass[i];
@@ -377,7 +382,7 @@ int main(int argc, char** argv)
 
         // feature description
         Mat descriptors;
-        ORB orb(500, 1.2f, 1, 7);
+        ORB orb(500, 1.2f, 1, 5);
         orb.compute(imgIcon, kpts, descriptors);
         // cout << kpts.size() << "  " << descriptors.size() << endl;
 
@@ -435,7 +440,8 @@ int main(int argc, char** argv)
                 vbInliers[vIdxInMatches[k]] = status[k];
                 nInliers += status[k];
             }
-            // cout << " = " << nInliers << endl;
+            // cout << "Match: " << kpts.size() << " " << vKeypoints[i].size()
+            //      << ", Inliers: " << nInliers << endl;
 
             if(nInliers >= 10)
                 vHist[vClass[i]]++;
