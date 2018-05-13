@@ -480,6 +480,10 @@ int main(int argc, char** argv)
             if(nInliers >= 10)
                 vHist[vClass[i]]++;
 
+            // add additional support if Inliers > 25
+            if(nInliers >= 25)
+                vHist[vClass[i]]++;
+
             // if(nInliers >= 10)
             {
                 int sum = 0;
