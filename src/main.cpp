@@ -12,11 +12,12 @@ int x2_, y2_;   // bottom  x,y
 float half_sz_; // half length of bounding box
 Mat imgOrg;     // color screenshot
 
-string stage_;                      // stage
-int megaProcess_;                   // mega process
-unordered_map<string, string> pkm_; // pokemon name and icon file <pokemon name, icon path>
-vector<pair<string, string>> team_; // pokemons into the board <pokemon name, icon path>
-unordered_map<string, int> megaTh_; // mega threshold <pokemon name, threshold>
+string stage_;                           // stage
+int megaProcess_;                        // mega process
+unordered_map<string, string> pkm_;      // pokemon name and icon file <pokemon name, icon path>
+vector<pair<string, string>> team_;      // pokemons into the board <pokemon name, icon path>
+unordered_map<string, string> megaName_; // mega name <pokemon name, mega pokemon name>
+unordered_map<string, int> megaTh_;      // mega threshold <pokemon name, threshold>
 
 void SplitString(const string& s, vector<string>& v, const string& c)
 {
@@ -73,9 +74,9 @@ bool LoadTeam()
     SplitString(strTeams, vTeams, ",");
 
     bool bMega = false;
-    if(megaTh_.find(vTeams[0]) != megaTh_.end())
+    if(megaName_.find(vTeams[0]) != megaName_.end())
     {
-        int th = megaTh_[vTeams[0]];
+        int th = megaTh_[megaName_[vTeams[0]]];
         if(megaProcess_ >= th)
         {
             megaProcess_ = th;
@@ -89,11 +90,17 @@ bool LoadTeam()
     int nPkm = 0;
     for(auto str : vTeams)
     {
+        if(pkm_.find(str) == pkm_.end())
+        {
+            cout << "Wrong pokemon name " << str << " in config.txt" << endl;
+            return false;
+        }
+
         nPkm++;
         if(nPkm == 1 && bMega)
         {
-            team_.emplace_back(str, pkm_["Mega_" + str]);
-            cout << " - " << str << " " << pkm_["Mega_" + str] << " *" << endl;
+            team_.emplace_back(str, pkm_[megaName_[str]]);
+            cout << " - " << megaName_[str] << " " << pkm_[megaName_[str]] << " *" << endl;
         }
         else
         {
@@ -105,6 +112,23 @@ bool LoadTeam()
     return true;
 }
 
+bool LoadMegaName()
+{
+    std::ifstream ifs("../img/species.txt", std::ifstream::in);
+    if(!ifs.is_open())
+        return false;
+
+    string str;
+    while(getline(ifs, str))
+    {
+        vector<string> vstrs;
+        SplitString(str, vstrs, " ");
+        if(vstrs.size() > 6)
+            megaName_[vstrs[1]] = vstrs[6];
+    }
+    return true;
+}
+
 bool LoadMegaThresh()
 {
     std::ifstream ifs("../img/effects.txt", std::ifstream::in);
@@ -112,7 +136,7 @@ bool LoadMegaThresh()
         return false;
 
     string str;
-    const size_t nskip = sizeof("INTEGER MEGA_THRESHOLD_Mega_") - 1;
+    const size_t nskip = sizeof("INTEGER MEGA_THRESHOLD_") - 1;
     while(getline(ifs, str))
     {
         size_t pos = str.find("MEGA_THRESHOLD");
@@ -226,6 +250,10 @@ int main(int argc, char** argv)
 
     // load config
     if(!LoadConfig())
+        return 0;
+
+    // load Mega name
+    if(!LoadMegaName())
         return 0;
 
     // load Mega threshold
