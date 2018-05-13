@@ -96,6 +96,12 @@ bool LoadTeam()
             return false;
         }
 
+        if(!str.compare("Coin"))
+        {
+            team_.emplace_back("Coin", "img/coin.png");
+            continue;
+        }
+
         nPkm++;
         if(nPkm == 1 && bMega)
         {
@@ -439,7 +445,7 @@ int main(int argc, char** argv)
                 Point2f ptQuery = kpts[m.queryIdx].pt - Point2f(imgIcon.rows / 2.0f, imgIcon.rows / 2.0f);
                 Point2f ptMatch = vKeypoints[i][m.trainIdx].pt - vIconCenters[i];
                 Point2f dpt = ptQuery - ptMatch;
-                bGoodMatch &= (norm(dpt) < 16.0);
+                bGoodMatch &= (norm(dpt) < 12.0);
 
                 vbGoodMatches.push_back(bGoodMatch);
             }

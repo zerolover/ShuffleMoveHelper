@@ -114,5 +114,4 @@ After building the program, you will see `adjustBoundary` and `ShuffleMoveHelper
 ## Planned Features
 
 1. Rewrite the program with python (python is more convenient than gcc)
-2. Identify the coin
-3. More automatic
+2. More automatic
